@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
-import { transactionApi } from '@/lib/api';
+import { transactionApi, type NetSummaryItem } from '@/lib/api';
 import { Layout } from '@/components/Layout';
-import { AlertCircle, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, Scale, Users } from 'lucide-react';
 
 interface DebtSummary {
   creditor_id: string;
@@ -23,6 +23,7 @@ interface ReceivableSummary {
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const [netSummary, setNetSummary] = useState<NetSummaryItem[]>([]);
   const [debtsSummary, setDebtsSummary] = useState<DebtSummary[]>([]);
   const [receivablesSummary, setReceivablesSummary] = useState<ReceivableSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,11 +37,15 @@ export const Dashboard: React.FC = () => {
   const loadData = async () => {
     if (!user) return;
     try {
-      const [debtsRes, receivablesRes] = await Promise.all([
+      const [netRes, debtsRes, receivablesRes] = await Promise.all([
+        transactionApi.getNetSummary(),
         transactionApi.getDebtsSummary(),
         transactionApi.getReceivablesSummary(),
       ]);
 
+      if (netRes.data.success && netRes.data.data) {
+        setNetSummary(netRes.data.data);
+      }
       if (debtsRes.data.success && debtsRes.data.data) {
         setDebtsSummary(debtsRes.data.data);
       }
@@ -71,113 +76,155 @@ export const Dashboard: React.FC = () => {
         {loading ? (
           <div className="text-center py-8">{t('loading')}</div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Who Owes You - Receivables */}
-            <div className="card flex flex-col">
+          <div className="space-y-6">
+            <div className="card">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                {t('whoOwesYou')}
+                <Scale className="w-5 h-5" />
+                {t('netDebtSummary')}
               </h3>
-              {receivablesSummary.length > 0 ? (
-                <div className="flex-1">
-                  <div className="space-y-2">
-                    {receivablesSummary.map((item) => (
-                      <div key={item.debtor_id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
-                        <div
-                          className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                          onClick={() => setExpandedReceivable(
-                            expandedReceivable === item.debtor_id ? null : item.debtor_id
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="font-medium">{item.debtor_username}</p>
-                              <p className="text-xs text-gray-500">
-                                {item.transaction_count} {t('expenses')}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                ₺{formatAmount(item.total_amount)}
-                              </p>
-                              {expandedReceivable === item.debtor_id ? (
-                                <ChevronUp className="w-4 h-4 text-gray-400" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
-                              )}
-                            </div>
-                          </div>
+              {netSummary.length > 0 ? (
+                <div className="space-y-2">
+                  {netSummary.map((item) => {
+                    const shouldPay = item.payment_direction === 'you_pay';
+
+                    return (
+                      <div
+                        key={item.counterparty_id}
+                        className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                      >
+                        <div>
+                          <p className="font-medium">{item.counterparty_username}</p>
+                          <p className="text-xs text-gray-500">
+                            {item.transaction_count} {t('expenses')}
+                          </p>
                         </div>
-                        {expandedReceivable === item.debtor_id && (
-                          <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-700/30">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {t('viewDetailsIn')} <Link to="/expenses" className="text-blue-600 dark:text-blue-400 hover:underline">{t('myExpenses')}</Link>
-                            </p>
-                          </div>
-                        )}
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${shouldPay ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                            ₺{formatAmount(item.net_amount)}
+                          </p>
+                          <p className={`text-xs ${shouldPay ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {shouldPay ? t('youNeedToPay') : t('youWillReceive')}
+                          </p>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="flex-1 flex items-center justify-center py-8">
-                  <p className="text-gray-500 dark:text-gray-400">{t('noOneOwesYou')}</p>
+                <div className="py-6 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">{t('noNetDebtSummary')}</p>
                 </div>
               )}
             </div>
 
-            {/* Pending Debts */}
-            <div className="card flex flex-col">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                {t('pendingDebts')}
-              </h3>
-              {debtsSummary.length > 0 ? (
-                <div className="flex-1">
-                  <div className="space-y-2">
-                    {debtsSummary.map((item) => (
-                      <div key={item.creditor_id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
-                        <div
-                          className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                          onClick={() => setExpandedDebt(
-                            expandedDebt === item.creditor_id ? null : item.creditor_id
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Who Owes You - Receivables */}
+              <div className="card flex flex-col">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  {t('whoOwesYou')}
+                </h3>
+                {receivablesSummary.length > 0 ? (
+                  <div className="flex-1">
+                    <div className="space-y-2">
+                      {receivablesSummary.map((item) => (
+                        <div key={item.debtor_id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                          <div
+                            className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                            onClick={() => setExpandedReceivable(
+                              expandedReceivable === item.debtor_id ? null : item.debtor_id
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="font-medium">{item.debtor_username}</p>
+                                <p className="text-xs text-gray-500">
+                                  {item.transaction_count} {t('expenses')}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                  ₺{formatAmount(item.total_amount)}
+                                </p>
+                                {expandedReceivable === item.debtor_id ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {expandedReceivable === item.debtor_id && (
+                            <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-700/30">
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {t('viewDetailsIn')} <Link to="/expenses" className="text-blue-600 dark:text-blue-400 hover:underline">{t('myExpenses')}</Link>
+                              </p>
+                            </div>
                           )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="font-medium">{item.creditor_username}</p>
-                              <p className="text-xs text-gray-500">
-                                {item.transaction_count} {t('expenses')}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <p className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                                ₺{formatAmount(item.total_amount)}
-                              </p>
-                              {expandedDebt === item.creditor_id ? (
-                                <ChevronUp className="w-4 h-4 text-gray-400" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
-                              )}
-                            </div>
-                          </div>
                         </div>
-                        {expandedDebt === item.creditor_id && (
-                          <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-700/30">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {t('viewDetailsIn')} <Link to="/debts" className="text-blue-600 dark:text-blue-400 hover:underline">{t('myDebts')}</Link>
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center py-8">
-                  <p className="text-gray-500 dark:text-gray-400">{t('noPendingDebts')}</p>
-                </div>
-              )}
+                ) : (
+                  <div className="flex-1 flex items-center justify-center py-8">
+                    <p className="text-gray-500 dark:text-gray-400">{t('noOneOwesYou')}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Pending Debts */}
+              <div className="card flex flex-col">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  {t('pendingDebts')}
+                </h3>
+                {debtsSummary.length > 0 ? (
+                  <div className="flex-1">
+                    <div className="space-y-2">
+                      {debtsSummary.map((item) => (
+                        <div key={item.creditor_id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                          <div
+                            className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                            onClick={() => setExpandedDebt(
+                              expandedDebt === item.creditor_id ? null : item.creditor_id
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="font-medium">{item.creditor_username}</p>
+                                <p className="text-xs text-gray-500">
+                                  {item.transaction_count} {t('expenses')}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <p className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                  ₺{formatAmount(item.total_amount)}
+                                </p>
+                                {expandedDebt === item.creditor_id ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {expandedDebt === item.creditor_id && (
+                            <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-700/30">
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {t('viewDetailsIn')} <Link to="/debts" className="text-blue-600 dark:text-blue-400 hover:underline">{t('myDebts')}</Link>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center py-8">
+                    <p className="text-gray-500 dark:text-gray-400">{t('noPendingDebts')}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

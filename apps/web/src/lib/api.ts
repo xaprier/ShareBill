@@ -10,6 +10,18 @@ import type {
   UserStatistics,
 } from '@sharebill/shared';
 
+export interface NetSummaryItem {
+  counterparty_id: string;
+  counterparty_username: string;
+  debt_transaction_count: number;
+  receivable_transaction_count: number;
+  transaction_count: number;
+  you_owe_amount: number;
+  owes_you_amount: number;
+  net_amount: number;
+  payment_direction: 'you_pay' | 'you_receive';
+}
+
 const baseURL = (import.meta.env.VITE_API_URL as string) ?? '/api';
 
 const api = axios.create({
@@ -109,6 +121,9 @@ export const transactionApi = {
   
   getReceivablesSummary: () =>
     api.get<ApiResponse<any[]>>('/transactions/receivables-summary'),
+
+  getNetSummary: () =>
+    api.get<ApiResponse<NetSummaryItem[]>>('/transactions/net-summary'),
   
   markAsPaid: (id: string) =>
     api.post<ApiResponse>(`/transactions/${id}/mark-paid`),

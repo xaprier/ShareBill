@@ -463,6 +463,93 @@ app.get('/transactions/receivables-summary', (req: Request, res: Response) => {
   }
 });
 
+// Get net summary grouped by user (mutual debts are netted)
+app.get('/transactions/net-summary', (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+
+    const rows: any[] = db.prepare(`
+      WITH debt_side AS (
+        SELECT 
+          t.created_by as counterparty_id,
+          u.username as counterparty_username,
+          COUNT(DISTINCT t.id) as debt_transaction_count,
+          SUM(tr.share) as you_owe_amount,
+          0 as owes_you_amount,
+          0 as receivable_transaction_count
+        FROM transaction_responsibilities tr
+        JOIN transactions t ON tr.transaction_id = t.id
+        JOIN users u ON t.created_by = u.id
+        WHERE tr.user_id = ? AND t.created_by != ? AND tr.paid = 0
+        GROUP BY t.created_by, u.username
+      ),
+      receivable_side AS (
+        SELECT 
+          tr.user_id as counterparty_id,
+          u.username as counterparty_username,
+          0 as debt_transaction_count,
+          0 as you_owe_amount,
+          SUM(tr.share) as owes_you_amount,
+          COUNT(DISTINCT t.id) as receivable_transaction_count
+        FROM transactions t
+        JOIN transaction_responsibilities tr ON t.id = tr.transaction_id
+        JOIN users u ON tr.user_id = u.id
+        WHERE t.created_by = ? AND tr.user_id != ? AND tr.paid = 0
+        GROUP BY tr.user_id, u.username
+      ),
+      merged AS (
+        SELECT * FROM debt_side
+        UNION ALL
+        SELECT * FROM receivable_side
+      )
+      SELECT
+        counterparty_id,
+        counterparty_username,
+        SUM(debt_transaction_count) as debt_transaction_count,
+        SUM(receivable_transaction_count) as receivable_transaction_count,
+        SUM(you_owe_amount) as you_owe_amount,
+        SUM(owes_you_amount) as owes_you_amount,
+        SUM(you_owe_amount) - SUM(owes_you_amount) as signed_net_amount,
+        ABS(SUM(you_owe_amount) - SUM(owes_you_amount)) as net_amount
+      FROM merged
+      GROUP BY counterparty_id, counterparty_username
+      HAVING ABS(SUM(you_owe_amount) - SUM(owes_you_amount)) > 0
+      ORDER BY net_amount DESC
+    `).all(userId, userId, userId, userId);
+
+    const summary = rows.map(row => {
+      const youOweAmount = Number((row.you_owe_amount || 0).toFixed(2));
+      const owesYouAmount = Number((row.owes_you_amount || 0).toFixed(2));
+      const signedNetAmount = Number((row.signed_net_amount || 0).toFixed(2));
+
+      return {
+        counterparty_id: row.counterparty_id,
+        counterparty_username: row.counterparty_username,
+        debt_transaction_count: row.debt_transaction_count,
+        receivable_transaction_count: row.receivable_transaction_count,
+        transaction_count: row.debt_transaction_count + row.receivable_transaction_count,
+        you_owe_amount: youOweAmount,
+        owes_you_amount: owesYouAmount,
+        net_amount: Number(Math.abs(signedNetAmount).toFixed(2)),
+        payment_direction: signedNetAmount > 0 ? 'you_pay' : 'you_receive',
+      };
+    });
+
+    const response: ApiResponse = {
+      success: true,
+      data: summary,
+    };
+
+    res.json(response);
+  } catch (error: any) {
+    console.error('Get net summary error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error' 
+    } as ApiResponse);
+  }
+});
+
 // Mark as paid
 app.post('/transactions/:id/mark-paid', (req: Request, res: Response) => {
   try {

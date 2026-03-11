@@ -58,6 +58,10 @@ const resources = {
       noOneOwesYou: 'No one owes you! 👍',
       expenses: 'expenses',
       viewDetailsIn: 'View details in',
+      netDebtSummary: 'Net Debt Summary',
+      youNeedToPay: 'You need to pay',
+      youWillReceive: 'You will receive',
+      noNetDebtSummary: 'No net debt between users! 🎉',
       
       // Transactions
       newTransaction: 'New Expense',
@@ -216,6 +220,10 @@ const resources = {
       noOneOwesYou: 'Kimse size borçlu değil! 👍',
       expenses: 'gider',
       viewDetailsIn: 'Detayları görüntüle:',
+      netDebtSummary: 'Net Borç Özeti',
+      youNeedToPay: 'Sen ödemelisin',
+      youWillReceive: 'Sen alacaksın',
+      noNetDebtSummary: 'Kullanıcılar arasında net borç yok! 🎉',
       
       // Transactions
       newTransaction: 'Yeni Gider',

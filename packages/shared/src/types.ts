@@ -121,3 +121,17 @@ export interface UserStatistics {
   pendingDebts: number;
   paidDebts: number;
 }
+
+export type PaymentDirection = 'you_pay' | 'you_receive';
+
+export interface NetSummaryItem {
+  counterparty_id: string;
+  counterparty_username: string;
+  debt_transaction_count: number;
+  receivable_transaction_count: number;
+  transaction_count: number;
+  you_owe_amount: number;
+  owes_you_amount: number;
+  net_amount: number;
+  payment_direction: PaymentDirection;
+}
