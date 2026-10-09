@@ -8,7 +8,7 @@ export class DatabaseManager {
 
   constructor(dbPath: string = './sharebill.db') {
     this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('journal_mode = DELETE');
     this.db.pragma('foreign_keys = ON');
     this.initialize();
   }

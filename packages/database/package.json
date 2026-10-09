@@ -10,7 +10,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.0",
+    "better-sqlite3": "^13.0.0",
     "bcrypt": "^5.1.1",
     "@sharebill/shared": "workspace:*"
   },

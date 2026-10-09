@@ -26,16 +26,6 @@ export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({ onClos
     loadUsers();
   }, []);
 
-  useEffect(() => {
-    // Otomatik olarak kendi kullanıcısını responsible listesine ekle
-    if (user && !formData.responsibleUsers.includes(user.id)) {
-      setFormData(prev => ({
-        ...prev,
-        responsibleUsers: [user.id]
-      }));
-    }
-  }, [user]);
-
   const loadUsers = async () => {
     try {
       const response = await userApi.getAll();
@@ -74,11 +64,6 @@ export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({ onClos
   };
 
   const toggleUser = (userId: string) => {
-    // Kendi kullanıcısını kaldıramaz
-    if (userId === user?.id) {
-      return;
-    }
-
     setFormData(prev => ({
       ...prev,
       responsibleUsers: prev.responsibleUsers.includes(userId)
@@ -160,21 +145,20 @@ export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({ onClos
                 return (
                   <label
                     key={u.id}
-                    className={`flex items-center p-2 rounded ${isCurrentUser
+                    className={`flex items-center p-2 rounded cursor-pointer ${isChecked
                       ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                   >
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => toggleUser(u.id)}
-                      disabled={isCurrentUser}
                       className="mr-3 w-4 h-4"
                     />
-                    <span className={isCurrentUser ? 'font-medium' : ''}>
+                    <span className={isChecked ? 'font-medium' : ''}>
                       {u.username}
-                      {isCurrentUser && ` (${t('youPayer')})`}
+                      {isCurrentUser && isChecked && ` (${t('youPayer')})`}
                     </span>
                   </label>
                 );

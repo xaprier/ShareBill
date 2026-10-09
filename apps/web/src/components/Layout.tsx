@@ -95,54 +95,52 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       )}
 
-      <div className="flex">
-        {/* Sidebar - Desktop */}
-        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:min-h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-          <div className="p-6 flex items-center gap-3">
-            <img src="/logo.png" alt="ShareBill" className="w-10 h-10" />
-            <h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-              {t('appName')}
-            </h1>
-          </div>
+      {/* Sidebar - Desktop */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+        <div className="p-6 flex items-center gap-3 shrink-0">
+          <img src="/logo.png" alt="ShareBill" className="w-10 h-10" />
+          <h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+            {t('appName')}
+          </h1>
+        </div>
 
-          <nav className="flex-1 px-4 space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+        <nav className="flex-1 min-h-0 overflow-y-auto px-4 space-y-1">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`flex items-center px-4 py-3 rounded-lg transition-colors ${isActive
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+              >
+                <Icon className="w-5 h-5 mr-3" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
 
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleLogout}
-              className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400"
-            >
-              <LogOut className="w-5 h-5 mr-3" />
-              {t('logout')}
-            </button>
-          </div>
-        </aside>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
+          <button
+            onClick={handleLogout}
+            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400"
+          >
+            <LogOut className="w-5 h-5 mr-3" />
+            {t('logout')}
+          </button>
+        </div>
+      </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
+      {/* Main Content */}
+      <main className="lg:ml-64 p-4 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {children}
+        </div>
+      </main>
 
       {/* Floating Action Button */}
       <button
