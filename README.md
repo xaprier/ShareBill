@@ -1,6 +1,6 @@
 # ShareBill
 
-A modern expense and debt tracking application for household expense management with shared responsibilities.
+Expense and debt tracking application for household expense management with shared responsibilities.
 
 ## Features
 
